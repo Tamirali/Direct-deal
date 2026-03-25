@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>Direct Deal | अक्ल की जीत</title>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --primary: #1a2a6c; --secondary: #b21f1f; --accent: #fdbb2d;
+            --success: #27ae60; --danger: #c0392b; --light: #f8f9fa;
+            --dark: #343a40; --shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            color: var(--dark); padding-bottom: 80px;
+        }
+        header {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white; padding: 20px 10px; text-align: center; box-shadow: var(--shadow);
+        }
+        .warning-banner {
+            background: #ff0000; color: white; padding: 12px;
+            text-align: center; font-weight: bold; animation: blink 1.5s infinite;
+        }
+        @keyframes blink { 50% { opacity: 0.7; } }
+        
+        .top-bar { background: var(--primary); padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; }
+        .admin-login-btn { background: var(--accent); color: var(--primary); border: none; padding: 8px 15px; border-radius: 20px; font-weight: bold; cursor: pointer; }
+        
+        .container { max-width: 1200px; margin: 0 auto; padding: 15px; }
+        .logo-box { text-align: center; margin: 20px 0; background: white; padding: 15px; border-radius: 15px; border: 2px solid var(--accent); }
+        .main-logo { font-size: 2.2rem; font-weight: 900; color: var(--primary); }
+        .main-logo span { color: var(--accent); }
+
+        /* Product Slider */
+        .slider-viewport { width: 100%; overflow-x: auto; display: flex; gap: 20px; padding: 20px 5px; scrollbar-width: none; }
+        .product-card { width: 280px; background: white; border-radius: 15px; box-shadow: var(--shadow); overflow: hidden; flex-shrink: 0; border: 1px solid #ddd; }
+        .product-img { width: 100%; height: 180px; object-fit: cover; background: #eee; }
+        .product-info { padding: 15px; }
+        .price { font-size: 1.2rem; font-weight: bold; color: var(--secondary); margin: 5px 0; }
+        .wa-btn { background: #25D366; color: white; padding: 10px; border-radius: 8px; text-decoration: none; display: block; text-align: center; font-weight: bold; }
+
+        /* Admin Panels */
+        .modal { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); display:none; justify-content:center; align-items:center; z-index:999; }
+        .admin-form { background:white; padding:25px; border-radius:15px; width:90%; max-width:400px; }
+        .input-group { margin-bottom: 10px; }
+        .input-group input, .input-group textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; }
+    </style>
+</head>
+<body>
+
+<div class="top-bar">
+    <div style="color: white; font-weight: bold;">Direct Deal Portal</div>
+    <button class="admin-login-btn" onclick="openLogin()">🔐 Admin</button>
+</div>
+
+<header>
+    <h1>Direct Deal</h1>
+    <p>खरीदें और बेचें - बिना किसी दलाल के</p>
+</header>
+
+<div class="warning-banner">⚠️ दलालों से सावधान! सीधा सौदा करें। ⚠️</div>
+
+<div class="container">
+    <div class="logo-box">
+        <div class="main-logo">🤝 <span>Direct</span> Deal</div>
+    </div>
+
+    <div id="loginModal" class="modal">
+        <div class="admin-form">
+            <h3>प्रशासक लॉगिन</h3>
+            <input type="password" id="passInput" placeholder="पासवर्ड दर्ज करें" style="width:100%; padding:10px; margin:15px 0;">
+            <button onclick="checkPass()" style="width:100%; padding:10px; background:var(--primary); color:white; border:none; border-radius:5px;">लॉगिन</button>
+            <button onclick="closeModal('loginModal')" style="width:100%; margin-top:10px; background:none; border:none; color:red;">बंद करें</button>
+        </div>
+    </div>
+
+    <div id="addProductPanel" style="display:none; background:white; padding:20px; border-radius:15px; border:2px solid var(--success); margin-bottom:20px;">
+        <h3>➕ नया प्रोडक्ट जोड़ें</h3>
+        <div class="input-group"><input type="text" id="pName" placeholder="सामान का नाम"></div>
+        <div class="input-group"><input type="number" id="pPrice" placeholder="कीमत (₹)"></div>
+        <div class="input-group"><input type="text" id="pLoc" placeholder="स्थान (उदा: सीवान)"></div>
+        <div class="input-group"><input type="url" id="pImg" placeholder="फोटो का लिंक (URL)"></div>
+        <div class="input-group"><input type="text" id="pWa" placeholder="WhatsApp नंबर"></div>
+        <button onclick="saveData()" style="width:100%; padding:12px; background:var(--success); color:white; border:none; border-radius:5px;">डेटाबेस में सेव करें</button>
+    </div>
+
+    <div id="status" style="text-align:center; padding:20px;">लोड हो रहा है...</div>
+    
+    <div class="slider-viewport" id="productDisplay">
+        </div>
+</div>
+
+<script>
+    // आपका नया Firebase API
+    const firebaseConfig = {
+      apiKey: "AIzaSyBC26hIZikHeDdciq9Fe1CjvlzgcS2gT4A",
+      authDomain: "direct-deal-65dea.firebaseapp.com",
+      projectId: "direct-deal-65dea",
+      databaseURL: "https://direct-deal-65dea-default-rtdb.firebaseio.com/",
+      storageBucket: "direct-deal-65dea.firebasestorage.app",
+      messagingSenderId: "306889482648",
+      appId: "1:306889482648:web:3c5e191374b02a2a784bed"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+    const SECRET_KEY = "tamir@00769"; // आपका नया पासवर्ड
+
+    function openLogin() { document.getElementById('loginModal').style.display = 'flex'; }
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+    function checkPass() {
+        if(document.getElementById('passInput').value === SECRET_KEY) {
+            document.getElementById('addProductPanel').style.display = 'block';
+            closeModal('loginModal');
+            alert("स्वागत है तामीर अली!");
+        } else {
+            alert("गलत पासवर्ड!");
+        }
+    }
+
+    function saveData() {
+        const name = document.getElementById('pName').value;
+        const price = document.getElementById('pPrice').value;
+        const loc = document.getElementById('pLoc').value;
+        const img = document.getElementById('pImg').value;
+        const wa = document.getElementById('pWa').value;
+
+        if(name && price && loc && wa) {
+            database.ref('listings').push({
+                name, price, loc, img, wa,
+                date: new Date().toLocaleDateString()
+            }).then(() => {
+                alert("सफलतापूर्वक जोड़ा गया!");
+                location.reload();
+            });
+        } else {
+            alert("कृपया सभी जानकारी भरें!");
+        }
+    }
+
+    // डेटा लोड करें
+    database.ref('listings').on('value', (snapshot) => {
+        const data = snapshot.val();
+        const display = document.getElementById('productDisplay');
+        const status = document.getElementById('status');
+        display.innerHTML = "";
+        
+        if(data) {
+            status.style.display = 'none';
+            for(let id in data) {
+                const item = data[id];
+                display.innerHTML += `
+                    <div class="product-card">
+                        <img src="${item.img || 'https://via.placeholder.com/280x180'}" class="product-img">
+                        <div class="product-info">
+                            <h3>${item.name}</h3>
+                            <p class="price">₹${item.price}</p>
+                            <p>📍 ${item.loc}</p>
+                            <a href="https://wa.me/${item.wa}" class="wa-btn">संपर्क करें</a>
+                        </div>
+                    </div>
+                `;
+            }
+        } else {
+            status.innerHTML = "अभी कोई सामान उपलब्ध नहीं है।";
+        }
+    });
+</script>
+</body>
+</html>
